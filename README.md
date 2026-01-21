@@ -36,6 +36,54 @@
 
 ---
 
+## 🪙 **$CQNT Token**
+
+> 🚀 **Launching Q1 2026:** First cryptocurrency token backed by audited systematic trading returns
+
+### Token Flywheel Mechanics
+
+**Trading Profits → Buybacks → Burns → Price Growth**
+
+The $CQNT token creates value through a systematic flywheel:
+
+1. **Token Launch** → Pump.fun (Solana) generates creator fees
+2. **Investment** → Fees invested in Claude Quant strategy (240% CAGR)
+3. **Profits** → Monthly trading returns compound
+4. **Buybacks** → Profits used to purchase $CQNT tokens
+5. **Burns** → Tokens permanently removed from supply
+6. **Loop** → Scarcity + proven returns = price appreciation
+
+### Phased Buyback Schedule
+
+- **Months 1-3:** 100% of profits → buybacks (ignition)
+- **Months 4-6:** 50% buybacks / 50% reinvest (momentum)
+- **Months 7-9:** 25% buybacks / 75% reinvest (transition)
+- **Month 10+:** 10% buybacks / 90% reinvest (perpetual)
+
+**Why this works:** By Month 24, 10% of a $1.8M fund generates larger buybacks than 100% of initial $100K.
+
+### Complete Documentation
+
+📄 **[Read the Full White Paper](./docs/CQNT_FLYWHEEL_WHITEPAPER_COMPLETE.md)**
+
+Comprehensive explanation including:
+- 36-month financial projections with tables
+- Smart contract architecture details
+- Risk management framework
+- Transparency commitments
+- Monthly audit schedule
+
+### Key Differentiators
+
+✅ **Real Revenue** - Backed by proven 240% CAGR strategy  
+✅ **Complete Transparency** - Daily GitHub updates + monthly CPA audits  
+✅ **Sustainable Model** - Phased optimization for long-term growth  
+✅ **First of its Kind** - No other token has this backing
+
+**Launch Details:** Q1 2026 | Platform: Pump.fun (Solana) | Contract: TBA
+
+---
+
 ## 🤖 **The AI Implementation**
 
 Claude AI analyzed the original 2003 Princeton thesis and:
@@ -120,10 +168,16 @@ Formula: (Ending/Starting)^(1/Years) - 1
 
 ## 📚 **Documentation**
 
+### Trading Strategy
 - [Methodology](./docs/methodology.md)
 - [Risk Framework](./docs/risk_framework.md)
 - [Results Analysis](./docs/results_analysis.md)
 - [Roadmap](./docs/roadmap.md)
+
+### $CQNT Token
+- [📄 Token Flywheel White Paper](./docs/CQNT_FLYWHEEL_WHITEPAPER_COMPLETE.md)
+- Launch: Q1 2026 on Pump.fun (Solana)
+- Mechanism: Trading profits → buybacks → burns → growth
 
 ---
 
@@ -136,6 +190,7 @@ Built on a Princeton University thesis from 2003 exploring time-zone arbitrage. 
 ## 📱 **Community**
 
 - **Website:** https://claudequant.ai
+- **Dashboard:** https://dashboard.claudequant.ai
 - **X (Twitter):** @ClaudeQuant_
 - **Telegram:** [Coming Soon]
 
@@ -145,6 +200,8 @@ Built on a Princeton University thesis from 2003 exploring time-zone arbitrage. 
 
 Trading futures involves substantial risk. **240% CAGR backtest** with **-35% max drawdown** demonstrates significant volatility. Past performance does not guarantee future results.
 
+**$CQNT Token:** Utility token, not a security. No guaranteed returns. See full disclaimers in white paper.
+
 This is not investment advice.
 
 ---
@@ -153,4 +210,4 @@ This is not investment advice.
 
 **21 years of academic research. Claude AI execution. Complete transparency.**
 
-**Don't trust. Verify.** 🔍
+**Don't trust. Verify.** 🔬
