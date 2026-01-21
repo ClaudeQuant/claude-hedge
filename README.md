@@ -1,3 +1,5 @@
+![Claude Quant Banner](./images/github-banner.png)
+
 # Claude Quant
 
 [![Live Performance](https://img.shields.io/badge/Live_32_Days-+54%25-brightgreen)](./data/live_simulation_dec3_jan16.csv)
