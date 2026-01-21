@@ -136,7 +136,7 @@ Built on a Princeton University thesis from 2003 exploring time-zone arbitrage. 
 ## 📱 **Community**
 
 - **Website:** https://claudequant.ai
-- **X (Twitter):** @ClaudeQuant
+- **X (Twitter):** @ClaudeQuant_
 - **Telegram:** [Coming Soon]
 
 ---
