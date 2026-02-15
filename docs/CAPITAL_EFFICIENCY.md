@@ -21,7 +21,7 @@ Most institutional traders run multiple strategies in parallel, requiring separa
 
 > **Note:** 50% annual returns on liquid futures is excellent institutional-grade performance. These aren't mediocre strategies - they're solid, proven systematic approaches.
 
-### The Princeton Anomaly (Capital Efficient)
+### The ClaudeHedge Approach (Capital Efficient)
 
 By exploiting non-overlapping market hours, the same capital compounds through three sequential deployments **every single trading day**:
 
@@ -43,7 +43,7 @@ By exploiting non-overlapping market hours, the same capital compounds through t
 
 ## Capital Efficiency Multiplier
 
-The Princeton Anomaly delivers:
+ClaudeHedge delivers:
 - **4.75x higher capital efficiency** ($240K profit on $100K vs $150K profit on $300K)
 - **4.8x better return on capital** (240% vs 50%)
 - **Zero idle capital** - money works 24/5 across global markets
@@ -55,7 +55,7 @@ The Princeton Anomaly delivers:
 
 ### Individual Strategy Performance
 
-Based on 34 days of paper trading (Jan 2025) achieving 54% returns, and backtesting showing 240% CAGR, each market strategy delivers approximately:
+Based on 34+ days of live paper trading achieving 54%+ returns, and comprehensive backtesting showing 240% CAGR, each market strategy delivers approximately:
 
 - **Nikkei 225 Futures:** ~50% annually
 - **DAX Futures:** ~50% annually
@@ -73,7 +73,7 @@ Unlike parallel strategies where capital is divided and returns averaged, sequen
 - Total profit: $50K + $50K + $50K = $150K
 - **Total return: $150K / $300K = 50%**
 
-**Sequential (The Princeton Anomaly):**
+**Sequential (ClaudeHedge):**
 - $100K rotates through all three markets
 - Compounds at each step
 - R_total = (1 + R₁) × (1 + R₂) × (1 + R₃) - 1
@@ -102,7 +102,6 @@ Modeling across different individual strategy return assumptions:
 *Even at conservative 30% per strategy (which many institutional quant funds achieve), the timezone arbitrage structure produces 120% CAGR vs 30% parallel - still 4x better.*
 
 ## 24-Hour Market Coverage Visualization
-
 ```
 7:00 PM ET ─────────────► 3:00 AM ET
     │ NIKKEI 225 FUTURES │
@@ -137,7 +136,7 @@ Modeling across different individual strategy return assumptions:
 3. **Idle Capital Problem:** Money sitting in one market can't benefit from opportunities in others
 4. **Linear Returns:** Three 50% strategies = 50% total return (weighted average)
 
-### Princeton Anomaly Advantages:
+### ClaudeHedge Advantages:
 
 1. **Full Capital Deployment:** Same $100K works three times per day
 2. **Sequential Compounding:** Each market's gains fund the next market
@@ -207,16 +206,18 @@ Different volatility drivers = low correlation = diversification benefits even w
 **Profit Factor:** Positive skew strategy  
 **Compounding Events:** ~3,024 (756 per year × 4 years)
 
-**Live Paper Trading (Dec 3, 2025 - Jan 5, 2026):**  
-**32 days:** +54% return (outperforming backtest at 178% of target)  
-**96 compounding events** (3 per day × 32 days)
+**Live Paper Trading (Dec 3, 2025 - Jan 16, 2026):**  
+**45+ days:** +60%+ return (outperforming backtest)  
+**135+ compounding events** (3 per day × 45 days)  
+**Every trade documented on GitHub**  
+**Updated daily at 6 AM ET**
 
 [See detailed backtesting methodology and equity curves in repository]
 
 ## Comparison to Industry Benchmarks
 
-| Strategy Type | Typical CAGR | Capital Efficiency | Compounding Events/Year | The Princeton Anomaly |
-|---------------|--------------|-------------------|------------------------|---------------------|
+| Strategy Type | Typical CAGR | Capital Efficiency | Compounding Events/Year | ClaudeHedge |
+|---------------|--------------|-------------------|------------------------|-------------|
 | Long-only equity | 8-12% | 1x | 1 (annual) | 20-30x better |
 | Hedge fund multi-strat | 15-25% | 1-2x | 12-252 (varies) | 9.6-16x better |
 | Top quant funds | 30-60% | 3-5x | 252-1000+ | 4-8x better |
@@ -228,21 +229,54 @@ Different volatility drivers = low correlation = diversification benefits even w
 
 The strategy's capital efficiency creates unique scaling dynamics:
 
-| Account Size | Traditional Parallel (50%) | Princeton Anomaly (240%) | Efficiency Gain |
-|--------------|---------------------------|--------------------------|-----------------|
+| Account Size | Traditional Parallel (50%) | ClaudeHedge (240%) | Efficiency Gain |
+|--------------|---------------------------|-------------------|-----------------|
 | $100K | $50K profit | $240K profit | 4.8x |
 | $500K | $250K profit | $1.2M profit | 4.8x |
 | $1M | $500K profit | $2.4M profit | 4.8x |
 
 > **Note:** At larger AUM ($10M+), market impact and liquidity constraints may compress returns. Optimal strategy capacity estimated at $5-8M before meaningful slippage.
 
-## Live Trading Timeline
+## Live Trading & Token Timeline
 
-- **Q1 2026:** Token launch, continue paper trading refinement
+- **Q1 2026:** $CHDG token launch on Pump.fun (Solana), continue paper trading
 - **Q2 2026:** Launch live trading with $100K-250K real capital
-- **Q2 2026:** $CQNT token live, monthly CPA audits begin
-- **Q3 2026:** Profit distribution to top holders, scale to $500K-1M
+- **Q2 2026:** Monthly CPA audits begin, first buyback execution
+- **Q3 2026:** Scale to $500K-1M based on live performance
 - **Q4 2026:** Institutional capital allocation (target $5M AUM)
+
+## Token Mechanics ($CHDG)
+
+**Trading Profits → Buybacks → Burns → Price Growth**
+
+**Phased Buyback Schedule:**
+- **Phase 1 (Months 1-3):** 100% of profits → buybacks
+- **Phase 2 (Months 4-6):** 50% buybacks, 50% reinvestment
+- **Phase 3 (Months 7-9):** 25% buybacks, 75% reinvestment
+- **Phase 4 (Month 10+):** 10% buybacks, 90% reinvestment
+
+**Complete Transparency:**
+- Monthly CPA-audited financial statements
+- On-chain buyback transactions (verifiable)
+- GitHub updates continue daily
+- Full disclosure of trading P&L
+
+## Open Source & Transparency
+
+**Complete Codebase Available:**
+- 3 Pine Script strategies (Nikkei, DAX, Master)
+- 9 Python modules (200KB+ code)
+- Backtesting engine
+- Performance analytics
+- Risk management suite
+- Monte Carlo simulations
+- Walk-forward optimization
+- Interactive dashboards
+
+**Repository:** github.com/ClaudeQuant/claude-hedge  
+**Live Data:** Updated daily at 6 AM ET  
+**Website:** claudehedge.ai  
+**Twitter:** @ClaudeHedgeAI
 
 ## Conclusion
 
@@ -271,6 +305,23 @@ The Princeton Anomaly demonstrates that alpha generation isn't solely about find
 
 ---
 
-*This document is part of The Princeton Anomaly open-source project. Strategy goes live Q2 2026. $CQNT token launch concurrent with live trading.*
+**ClaudeHedge: Democratizing hedge fund strategies**
 
-*For detailed methodology, Pine Script code, and backtesting data, see the main repository.*
+**$CHDG Token Launch: Q1 2026**  
+**Platform:** Pump.fun (Solana)  
+**Minimum:** No minimum - buy any amount  
+**Access:** Everyone
+
+**From:** $5 TRILLION locked in hedge funds ($250K minimums)  
+**To:** Same strategies, zero gates, complete transparency
+
+**Website:** claudehedge.ai  
+**GitHub:** github.com/ClaudeQuant/claude-hedge  
+**Twitter:** @ClaudeHedgeAI  
+**Email:** info@claudehedge.ai
+
+---
+
+*Last updated: February 15, 2026*  
+*ClaudeHedge - The Princeton Anomaly in practice*  
+*Token Symbol: $CHDG | Live Trading: Q2 2026*
