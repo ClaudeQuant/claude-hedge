@@ -1,0 +1,209 @@
+//@version=5
+strategy("ClaudeHedge - Nikkei Session Strategy", 
+         shorttitle="CH_NIKKEI",
+         overlay=true,
+         initial_capital=100000,
+         default_qty_type=strategy.percent_of_equity,
+         default_qty_value=95,
+         commission_type=strategy.commission.percent,
+         commission_value=0.01,
+         slippage=1)
+
+// ============================================================================
+// ClaudeHedge Nikkei 225 Futures Strategy (Asian Session)
+// ============================================================================
+// Trading Hours: 7:00 PM - 3:00 AM ET (Asian Market Hours)
+// Market: Nikkei 225 Futures (NKD)
+// Strategy: Overnight gap + Asia momentum
+// Position Sizing: VIX-adaptive with 95% base allocation
+// ============================================================================
+
+// ==================== INPUTS ====================
+
+// Session Settings (overnight session)
+i_session_start = input.int(19, "Session Start Hour (ET)", minval=0, maxval=23)
+i_session_end = input.int(3, "Session End Hour (ET)", minval=0, maxval=23)
+
+// Strategy Parameters
+i_ema_fast = input.int(8, "Fast EMA", minval=3, maxval=50)
+i_ema_slow = input.int(21, "Slow EMA", minval=10, maxval=100)
+i_atr_length = input.int(14, "ATR Period", minval=5, maxval=50)
+i_rsi_length = input.int(14, "RSI Period", minval=5, maxval=50)
+
+// Breakout Parameters
+i_breakout_length = input.int(20, "Breakout Period", minval=10, maxval=100)
+i_breakout_multiplier = input.float(1.5, "Breakout ATR Multiplier", minval=0.5, maxval=3.0)
+
+// Risk Management
+i_stop_loss_atr = input.float(2.0, "Stop Loss (ATR)", minval=0.5, maxval=5.0)
+i_take_profit_atr = input.float(3.0, "Take Profit (ATR)", minval=1.0, maxval=10.0)
+i_trailing_stop_atr = input.float(1.5, "Trailing Stop (ATR)", minval=0.5, maxval=5.0)
+
+// VIX Settings
+i_vix_low = input.float(15.0, "VIX Low", minval=5.0, maxval=25.0)
+i_vix_medium = input.float(25.0, "VIX Medium", minval=15.0, maxval=35.0)
+i_vix_high = input.float(35.0, "VIX High", minval=25.0, maxval=50.0)
+
+// ==================== SESSION DETECTION ====================
+
+// Handle overnight session (19:00 to 03:00 next day)
+is_session = (hour >= i_session_start) or (hour < i_session_end)
+is_session_start = hour == i_session_start and hour[1] != i_session_start
+is_session_end = hour == i_session_end and hour[1] != i_session_end
+
+// ==================== INDICATORS ====================
+
+// Moving Averages
+ema_fast = ta.ema(close, i_ema_fast)
+ema_slow = ta.ema(close, i_ema_slow)
+sma_200 = ta.sma(close, 200)
+
+// Volatility
+atr = ta.atr(i_atr_length)
+
+// Momentum
+rsi = ta.rsi(close, i_rsi_length)
+momentum = ta.mom(close, 10)
+
+// Breakout Levels
+highest_high = ta.highest(high, i_breakout_length)
+lowest_low = ta.lowest(low, i_breakout_length)
+breakout_range = highest_high - lowest_low
+
+// Volume
+volume_sma = ta.sma(volume, 20)
+high_volume = volume > volume_sma * 1.3
+
+// ==================== VIX SIMULATION ====================
+
+// Simulated VIX from realized volatility
+returns = ta.change(close) / close[1]
+realized_vol = ta.stdev(returns, 20) * math.sqrt(252) * 100
+vix_sim = realized_vol
+
+// Position sizing based on VIX
+vix_mult = vix_sim < i_vix_low ? 1.0 :
+           vix_sim < i_vix_medium ? 0.75 :
+           vix_sim < i_vix_high ? 0.50 : 0.30
+
+// ==================== ENTRY SIGNALS ====================
+
+// Trend Following
+trend_long = ema_fast > ema_slow and close > sma_200
+trend_short = ema_fast < ema_slow and close < sma_200
+
+// Breakout Signals
+breakout_long = close > highest_high[1] and high_volume
+breakout_short = close < lowest_low[1] and high_volume
+
+// RSI Confirmation
+rsi_bullish = rsi > 50 and rsi < 70
+rsi_bearish = rsi < 50 and rsi > 30
+
+// Momentum Confirmation
+momentum_bullish = momentum > 0
+momentum_bearish = momentum < 0
+
+// Combined Long Conditions
+long_entry = is_session and (
+     (trend_long and rsi_bullish and momentum_bullish) or
+     (breakout_long and rsi > 45))
+
+// Combined Short Conditions
+short_entry = is_session and (
+     (trend_short and rsi_bearish and momentum_bearish) or
+     (breakout_short and rsi < 55))
+
+// ==================== EXIT LOGIC ====================
+
+// ATR-based stops
+long_stop = strategy.position_avg_price - (atr * i_stop_loss_atr)
+long_target = strategy.position_avg_price + (atr * i_take_profit_atr)
+long_trail = close - (atr * i_trailing_stop_atr)
+
+short_stop = strategy.position_avg_price + (atr * i_stop_loss_atr)
+short_target = strategy.position_avg_price - (atr * i_take_profit_atr)
+short_trail = close + (atr * i_trailing_stop_atr)
+
+// Session end - close all
+force_exit = is_session_end
+
+// ==================== STRATEGY EXECUTION ====================
+
+// Position size with VIX adjustment
+pos_size = 95 * vix_mult
+
+// Long Entries
+if long_entry and strategy.position_size == 0
+    strategy.entry("Long", strategy.long, qty=pos_size)
+    
+// Long Exits
+if strategy.position_size > 0
+    strategy.exit("Long Exit", "Long", 
+                 stop=long_stop, 
+                 limit=long_target,
+                 trail_offset=atr * i_trailing_stop_atr,
+                 trail_points=atr * i_trailing_stop_atr)
+    if force_exit
+        strategy.close("Long", comment="Session End")
+
+// Short Entries
+if short_entry and strategy.position_size == 0
+    strategy.entry("Short", strategy.short, qty=pos_size)
+    
+// Short Exits
+if strategy.position_size < 0
+    strategy.exit("Short Exit", "Short",
+                 stop=short_stop,
+                 limit=short_target,
+                 trail_offset=atr * i_trailing_stop_atr,
+                 trail_points=atr * i_trailing_stop_atr)
+    if force_exit
+        strategy.close("Short", comment="Session End")
+
+// ==================== VISUALIZATION ====================
+
+// Plot EMAs
+plot(ema_fast, "EMA Fast", color=color.new(color.blue, 0), linewidth=2)
+plot(ema_slow, "EMA Slow", color=color.new(color.red, 0), linewidth=2)
+plot(sma_200, "SMA 200", color=color.new(color.gray, 0), linewidth=1)
+
+// Plot Breakout Levels
+plot(highest_high, "Resistance", color=color.new(color.green, 70), style=plot.style_stepline)
+plot(lowest_low, "Support", color=color.new(color.red, 70), style=plot.style_stepline)
+
+// Session Background
+bgcolor(is_session ? color.new(color.purple, 95) : na, title="Asian Session")
+
+// Entry Signals
+plotshape(long_entry, "Long", shape.triangleup, location.belowbar, 
+         color.new(color.lime, 0), size=size.small)
+plotshape(short_entry, "Short", shape.triangledown, location.abovebar,
+         color.new(color.red, 0), size=size.small)
+
+// ==================== PERFORMANCE TABLE ====================
+
+var table perf_table = table.new(position.bottom_right, 2, 5, bgcolor=color.new(color.black, 85))
+
+if barstate.islast
+    table.cell(perf_table, 0, 0, "Nikkei Stats", bgcolor=color.new(color.purple, 50), text_color=color.white)
+    table.cell(perf_table, 1, 0, "Value", bgcolor=color.new(color.purple, 50), text_color=color.white)
+    
+    table.cell(perf_table, 0, 1, "Trades", text_color=color.white)
+    table.cell(perf_table, 1, 1, str.tostring(strategy.closedtrades), text_color=color.white)
+    
+    table.cell(perf_table, 0, 2, "Win %", text_color=color.white)
+    table.cell(perf_table, 1, 2, str.tostring(strategy.wintrades/strategy.closedtrades*100, "#.#") + "%", text_color=color.white)
+    
+    table.cell(perf_table, 0, 3, "PF", text_color=color.white)
+    table.cell(perf_table, 1, 3, str.tostring(strategy.grossprofit/strategy.grossloss, "#.##"), text_color=color.white)
+    
+    table.cell(perf_table, 0, 4, "VIX", text_color=color.white)
+    table.cell(perf_table, 1, 4, str.tostring(vix_sim, "#.#"), 
+         text_color=vix_sim < 20 ? color.green : vix_sim < 30 ? color.yellow : color.red)
+
+// ==================== ALERTS ====================
+
+alertcondition(long_entry, "Nikkei Long", "Nikkei Long Entry Signal")
+alertcondition(short_entry, "Nikkei Short", "Nikkei Short Entry Signal")
+alertcondition(force_exit, "Session End", "Nikkei Session Ending")

@@ -1,0 +1,306 @@
+//@version=5
+strategy("ClaudeHedge - Master Timezone Arbitrage", 
+         shorttitle="CH_MASTER",
+         overlay=true,
+         initial_capital=100000,
+         default_qty_type=strategy.cash,
+         commission_type=strategy.commission.percent,
+         commission_value=0.01,
+         slippage=1)
+
+// ============================================================================
+// ClaudeHedge Master Strategy - Complete Timezone Arbitrage System
+// ============================================================================
+// Coordinates trading across all three global sessions:
+// - Nikkei 225 (19:00-03:00 ET) - Asian Session
+// - DAX (03:00-11:00 ET) - European Session  
+// - Nasdaq (11:00-19:00 ET) - US Session
+//
+// Capital rotates sequentially with intraday compounding
+// ============================================================================
+
+// ==================== INPUTS ====================
+
+// Capital Management
+i_initial_capital = input.float(100000, "Initial Capital", minval=10000)
+i_base_position_pct = input.float(95, "Base Position %", minval=10, maxval=100)
+i_reinvest_profits = input.bool(true, "Reinvest Profits")
+
+// VIX Adaptive Sizing
+i_use_vix_sizing = input.bool(true, "Use VIX Sizing")
+i_vix_low = input.float(15.0, "VIX Low Threshold")
+i_vix_medium = input.float(25.0, "VIX Medium Threshold")
+i_vix_high = input.float(35.0, "VIX High Threshold")
+
+// Risk Management
+i_max_daily_loss = input.float(8.0, "Max Daily Loss %", minval=1.0, maxval=20.0)
+i_stop_loss_pct = input.float(3.0, "Stop Loss %", minval=0.5, maxval=10.0)
+i_take_profit_pct = input.float(5.0, "Take Profit %", minval=1.0, maxval=20.0)
+
+// Strategy Parameters
+i_momentum_length = input.int(20, "Momentum Period", minval=5, maxval=100)
+i_rsi_length = input.int(14, "RSI Period", minval=5, maxval=50)
+i_atr_length = input.int(14, "ATR Period", minval=5, maxval=50)
+
+// ==================== SESSION DETECTION ====================
+
+// Define sessions (ET timezone)
+is_nikkei = (hour >= 19) or (hour < 3)
+is_dax = (hour >= 3) and (hour < 11)  
+is_nasdaq = (hour >= 11) and (hour < 19)
+
+// Session transitions
+nikkei_start = hour == 19 and hour[1] != 19
+dax_start = hour == 3 and hour[1] != 3
+nasdaq_start = hour == 11 and hour[1] != 11
+
+// Day tracking
+is_new_day = dayofweek != dayofweek[1]
+
+// ==================== CAPITAL TRACKING ====================
+
+// Track capital through sessions
+var float session_start_capital = i_initial_capital
+var float current_capital = i_initial_capital
+var float daily_start_capital = i_initial_capital
+var float daily_high_capital = i_initial_capital
+
+// Update capital at session starts
+if nikkei_start
+    if is_new_day
+        daily_start_capital := current_capital
+        daily_high_capital := current_capital
+    session_start_capital := current_capital
+    
+if dax_start or nasdaq_start
+    session_start_capital := current_capital
+
+// Track profits
+var float session_profit = 0.0
+var float daily_profit = 0.0
+
+if strategy.closedtrades > strategy.closedtrades[1]
+    last_trade_profit = strategy.netprofit - strategy.netprofit[1]
+    session_profit += last_trade_profit
+    daily_profit += last_trade_profit
+    
+    if i_reinvest_profits
+        current_capital += last_trade_profit
+        daily_high_capital := math.max(daily_high_capital, current_capital)
+
+// Reset counters
+if nikkei_start and is_new_day
+    session_profit := 0.0
+    daily_profit := 0.0
+
+// ==================== INDICATORS ====================
+
+// Price Action
+ema_9 = ta.ema(close, 9)
+ema_21 = ta.ema(close, 21)
+ema_50 = ta.ema(close, 50)
+sma_200 = ta.sma(close, 200)
+
+// Momentum
+rsi = ta.rsi(close, i_rsi_length)
+macd_line = ta.ema(close, 12) - ta.ema(close, 26)
+macd_signal = ta.ema(macd_line, 9)
+macd_hist = macd_line - macd_signal
+
+// Volatility
+atr = ta.atr(i_atr_length)
+bb_basis = ta.sma(close, 20)
+bb_dev = ta.stdev(close, 20)
+bb_upper = bb_basis + (bb_dev * 2)
+bb_lower = bb_basis - (bb_dev * 2)
+
+// Volume
+vol_sma = ta.sma(volume, 20)
+high_volume = volume > vol_sma * 1.5
+
+// ==================== VIX SIMULATION ====================
+
+returns = ta.change(close) / close[1]
+realized_vol = ta.stdev(returns, 20) * math.sqrt(252) * 100
+
+vix_multiplier = if i_use_vix_sizing
+    if realized_vol < i_vix_low
+        1.0
+    else if realized_vol < i_vix_medium
+        0.75
+    else if realized_vol < i_vix_high
+        0.50
+    else
+        0.30
+else
+    1.0
+
+// ==================== ENTRY LOGIC ====================
+
+// Universal trend signals
+strong_uptrend = ema_9 > ema_21 and ema_21 > ema_50 and close > sma_200
+strong_downtrend = ema_9 < ema_21 and ema_21 < ema_50 and close < sma_200
+
+// Momentum signals
+bullish_momentum = rsi > 50 and macd_hist > 0 and macd_line > macd_signal
+bearish_momentum = rsi < 50 and macd_hist < 0 and macd_line < macd_signal
+
+// Breakout signals
+breakout_up = close > bb_upper[1] and high_volume
+breakout_down = close < bb_lower[1] and high_volume
+
+// Mean reversion signals
+oversold = rsi < 30 and close < bb_lower
+overbought = rsi > 70 and close > bb_upper
+
+// Combined entry conditions
+long_signal = (strong_uptrend and bullish_momentum) or breakout_up or oversold
+short_signal = (strong_downtrend and bearish_momentum) or breakout_down or overbought
+
+// ==================== RISK CHECKS ====================
+
+// Check daily loss limit
+daily_loss_pct = (current_capital - daily_start_capital) / daily_start_capital * 100
+max_daily_loss_hit = daily_loss_pct < -i_max_daily_loss
+
+// Check drawdown from daily high
+daily_drawdown = (current_capital - daily_high_capital) / daily_high_capital * 100
+
+// ==================== POSITION SIZING ====================
+
+// Calculate position size
+base_position = (current_capital * i_base_position_pct / 100) * vix_multiplier
+
+// Reduce size if in drawdown
+if daily_drawdown < -3.0
+    base_position := base_position * 0.75
+if daily_drawdown < -5.0
+    base_position := base_position * 0.50
+
+// ==================== STRATEGY EXECUTION ====================
+
+// Entry conditions - only if not at max loss
+can_trade = not max_daily_loss_hit and strategy.position_size == 0
+
+if can_trade
+    // Long entries
+    if long_signal and (is_nikkei or is_dax or is_nasdaq)
+        strategy.entry("Long", strategy.long, qty=base_position/close)
+        
+    // Short entries
+    if short_signal and (is_nikkei or is_dax or is_nasdaq)
+        strategy.entry("Short", strategy.short, qty=base_position/close)
+
+// Exit conditions
+if strategy.position_size != 0
+    // Calculate stops
+    long_stop = strategy.position_avg_price * (1 - i_stop_loss_pct/100)
+    long_target = strategy.position_avg_price * (1 + i_take_profit_pct/100)
+    short_stop = strategy.position_avg_price * (1 + i_stop_loss_pct/100)
+    short_target = strategy.position_avg_price * (1 - i_take_profit_pct/100)
+    
+    // Exit at session end
+    if (is_nikkei and hour == 3) or (is_dax and hour == 11) or (is_nasdaq and hour == 19)
+        strategy.close_all(comment="Session End")
+    
+    // Stop loss / Take profit
+    if strategy.position_size > 0
+        if close <= long_stop
+            strategy.close("Long", comment="Stop Loss")
+        if close >= long_target
+            strategy.close("Long", comment="Take Profit")
+            
+    if strategy.position_size < 0
+        if close >= short_stop
+            strategy.close("Short", comment="Stop Loss")
+        if close <= short_target
+            strategy.close("Short", comment="Take Profit")
+    
+    // Force exit on max daily loss
+    if max_daily_loss_hit
+        strategy.close_all(comment="Max Daily Loss")
+
+// ==================== VISUALIZATION ====================
+
+// Plot EMAs
+plot(ema_9, "EMA 9", color=color.blue, linewidth=1)
+plot(ema_21, "EMA 21", color=color.orange, linewidth=1)
+plot(ema_50, "EMA 50", color=color.red, linewidth=2)
+
+// Plot Bollinger Bands
+p1 = plot(bb_upper, "BB Upper", color=color.green, linewidth=1)
+p2 = plot(bb_lower, "BB Lower", color=color.red, linewidth=1)
+fill(p1, p2, color=color.new(color.blue, 95))
+
+// Session backgrounds
+bgcolor(is_nikkei ? color.new(color.purple, 97) : na, title="Nikkei")
+bgcolor(is_dax ? color.new(color.blue, 97) : na, title="DAX")
+bgcolor(is_nasdaq ? color.new(color.green, 97) : na, title="Nasdaq")
+
+// Entry signals
+plotshape(long_signal and can_trade, "Long", shape.triangleup, 
+         location.belowbar, color.lime, size=size.small)
+plotshape(short_signal and can_trade, "Short", shape.triangledown,
+         location.abovebar, color.red, size=size.small)
+
+// ==================== PERFORMANCE DASHBOARD ====================
+
+var table dashboard = table.new(position.top_right, 3, 8, bgcolor=color.new(color.black, 80))
+
+if barstate.islast
+    // Header
+    table.cell(dashboard, 0, 0, "ClaudeHedge", colspan=3, 
+              bgcolor=color.new(color.blue, 60), text_color=color.white, text_size=size.large)
+    
+    // Session
+    current_session = is_nikkei ? "Nikkei" : is_dax ? "DAX" : is_nasdaq ? "Nasdaq" : "Closed"
+    table.cell(dashboard, 0, 1, "Session", text_color=color.white)
+    table.cell(dashboard, 1, 1, current_session, colspan=2, text_color=color.yellow)
+    
+    // Capital
+    table.cell(dashboard, 0, 2, "Capital", text_color=color.white)
+    table.cell(dashboard, 1, 2, "$" + str.tostring(current_capital, "#,###"), 
+              colspan=2, text_color=color.white)
+    
+    // Daily P&L
+    table.cell(dashboard, 0, 3, "Daily P&L", text_color=color.white)
+    pnl_color = daily_profit > 0 ? color.green : color.red
+    table.cell(dashboard, 1, 3, "$" + str.tostring(daily_profit, "#,###"), 
+              colspan=2, text_color=pnl_color)
+    
+    // Performance
+    total_return = (current_capital / i_initial_capital - 1) * 100
+    table.cell(dashboard, 0, 4, "Total Return", text_color=color.white)
+    table.cell(dashboard, 1, 4, str.tostring(total_return, "#.##") + "%",
+              colspan=2, text_color=total_return > 0 ? color.green : color.red)
+    
+    // Stats
+    win_rate = strategy.closedtrades > 0 ? 
+               strategy.wintrades / strategy.closedtrades * 100 : 0
+    table.cell(dashboard, 0, 5, "Win Rate", text_color=color.white)
+    table.cell(dashboard, 1, 5, str.tostring(win_rate, "#.#") + "%",
+              colspan=2, text_color=color.white)
+    
+    // VIX
+    table.cell(dashboard, 0, 6, "VIX Sim", text_color=color.white)
+    vix_color = realized_vol < 20 ? color.green : realized_vol < 30 ? color.yellow : color.red
+    table.cell(dashboard, 1, 6, str.tostring(realized_vol, "#.#"), 
+              colspan=2, text_color=vix_color)
+    
+    // Position
+    pos_status = strategy.position_size > 0 ? "LONG" : 
+                strategy.position_size < 0 ? "SHORT" : "FLAT"
+    pos_color = strategy.position_size > 0 ? color.green :
+               strategy.position_size < 0 ? color.red : color.gray
+    table.cell(dashboard, 0, 7, "Position", text_color=color.white)
+    table.cell(dashboard, 1, 7, pos_status, colspan=2, 
+              bgcolor=color.new(pos_color, 70), text_color=color.white)
+
+// ==================== ALERTS ====================
+
+alertcondition(nikkei_start, "Nikkei Start", "Nikkei session starting")
+alertcondition(dax_start, "DAX Start", "DAX session starting")
+alertcondition(nasdaq_start, "Nasdaq Start", "Nasdaq session starting")
+alertcondition(max_daily_loss_hit, "Max Loss Hit", "Maximum daily loss reached!")
+alertcondition(long_signal and can_trade, "Long Entry", "Long entry signal")
+alertcondition(short_signal and can_trade, "Short Entry", "Short entry signal")

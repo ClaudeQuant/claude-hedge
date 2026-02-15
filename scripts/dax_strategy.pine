@@ -1,0 +1,234 @@
+//@version=5
+strategy("ClaudeHedge - DAX Session Strategy", 
+         shorttitle="CH_DAX",
+         overlay=true,
+         initial_capital=100000,
+         default_qty_type=strategy.percent_of_equity,
+         default_qty_value=95,
+         commission_type=strategy.commission.percent,
+         commission_value=0.01,
+         slippage=1)
+
+// ============================================================================
+// ClaudeHedge DAX Futures Strategy (European Session)
+// ============================================================================
+// Trading Hours: 3:00 AM - 11:00 AM ET (European Market Hours)
+// Market: DAX Futures (FDAX)
+// Strategy: Momentum + Mean Reversion Hybrid
+// Position Sizing: VIX-adaptive with 95% base allocation
+// ============================================================================
+
+// ==================== INPUTS ====================
+
+// Session Settings
+i_session_start = input.int(3, "Session Start Hour (ET)", minval=0, maxval=23)
+i_session_end = input.int(11, "Session End Hour (ET)", minval=0, maxval=23)
+
+// Strategy Parameters
+i_momentum_length = input.int(20, "Momentum Period", minval=5, maxval=100)
+i_volatility_length = input.int(14, "Volatility Period", minval=5, maxval=50)
+i_rsi_length = input.int(14, "RSI Period", minval=5, maxval=50)
+i_rsi_oversold = input.int(30, "RSI Oversold", minval=10, maxval=40)
+i_rsi_overbought = input.int(70, "RSI Overbought", minval=60, maxval=90)
+
+// Risk Management
+i_stop_loss_pct = input.float(3.0, "Stop Loss %", minval=0.5, maxval=10.0, step=0.1)
+i_take_profit_pct = input.float(5.0, "Take Profit %", minval=1.0, maxval=20.0, step=0.5)
+i_max_daily_loss = input.float(5.0, "Max Daily Loss %", minval=1.0, maxval=10.0, step=0.5)
+
+// VIX Adaptive Sizing
+i_vix_low = input.float(15.0, "VIX Low Threshold", minval=5.0, maxval=25.0)
+i_vix_medium = input.float(25.0, "VIX Medium Threshold", minval=15.0, maxval=35.0)
+i_vix_high = input.float(35.0, "VIX High Threshold", minval=25.0, maxval=50.0)
+
+// ==================== SESSION FILTER ====================
+
+is_session = hour >= i_session_start and hour < i_session_end
+is_new_session = hour == i_session_start and hour[1] != i_session_start
+
+// ==================== INDICATORS ====================
+
+// Price Action
+ema_fast = ta.ema(close, 9)
+ema_slow = ta.ema(close, 21)
+sma_baseline = ta.sma(close, 50)
+
+// Momentum Indicators
+rsi = ta.rsi(close, i_rsi_length)
+macd_line = ta.ema(close, 12) - ta.ema(close, 26)
+macd_signal = ta.ema(macd_line, 9)
+macd_histogram = macd_line - macd_signal
+
+// Volatility Indicators
+atr = ta.atr(i_volatility_length)
+bollinger_basis = ta.sma(close, 20)
+bollinger_dev = ta.stdev(close, 20)
+bollinger_upper = bollinger_basis + (bollinger_dev * 2)
+bollinger_lower = bollinger_basis - (bollinger_dev * 2)
+
+// Volume Analysis
+volume_avg = ta.sma(volume, 20)
+volume_spike = volume > volume_avg * 1.5
+
+// ==================== VIX SIMULATION ====================
+// Simulated VIX based on DAX volatility (for backtesting)
+// In live trading, this would be replaced with actual VIX feed
+
+realized_vol = ta.stdev(ta.change(close) / close[1], 20) * math.sqrt(252) * 100
+simulated_vix = realized_vol
+
+// Position Size Multiplier based on VIX
+vix_multiplier = simulated_vix < i_vix_low ? 1.0 :
+                 simulated_vix < i_vix_medium ? 0.75 :
+                 simulated_vix < i_vix_high ? 0.50 : 0.30
+
+// ==================== ENTRY CONDITIONS ====================
+
+// Long Entry Signals
+momentum_long = ema_fast > ema_slow and close > sma_baseline
+rsi_long = rsi < i_rsi_oversold or (rsi > 50 and rsi < 60)
+macd_long = macd_histogram > 0 and macd_line > macd_signal
+breakout_long = close > bollinger_upper[1] and volume_spike
+mean_reversion_long = close < bollinger_lower and rsi < 40
+
+long_condition = is_session and (
+     (momentum_long and rsi_long and macd_long) or
+     (breakout_long) or
+     (mean_reversion_long))
+
+// Short Entry Signals
+momentum_short = ema_fast < ema_slow and close < sma_baseline
+rsi_short = rsi > i_rsi_overbought or (rsi < 50 and rsi > 40)
+macd_short = macd_histogram < 0 and macd_line < macd_signal
+breakout_short = close < bollinger_lower[1] and volume_spike
+mean_reversion_short = close > bollinger_upper and rsi > 60
+
+short_condition = is_session and (
+     (momentum_short and rsi_short and macd_short) or
+     (breakout_short) or
+     (mean_reversion_short))
+
+// ==================== EXIT CONDITIONS ====================
+
+// Exit at session end
+exit_session = hour >= i_session_end
+
+// Profit target hit
+profit_target_long = close >= strategy.position_avg_price * (1 + i_take_profit_pct / 100)
+profit_target_short = close <= strategy.position_avg_price * (1 - i_take_profit_pct / 100)
+
+// Stop loss hit
+stop_loss_long = close <= strategy.position_avg_price * (1 - i_stop_loss_pct / 100)
+stop_loss_short = close >= strategy.position_avg_price * (1 + i_stop_loss_pct / 100)
+
+// Reversal signals
+reversal_long = macd_histogram < 0 and rsi > 70
+reversal_short = macd_histogram > 0 and rsi < 30
+
+// ==================== STRATEGY EXECUTION ====================
+
+// Calculate position size with VIX adjustment
+position_size = 95 * vix_multiplier
+
+// Long Entry
+if long_condition and strategy.position_size == 0
+    strategy.entry("Long", strategy.long, qty=position_size)
+    
+// Long Exit
+if strategy.position_size > 0
+    if exit_session
+        strategy.close("Long", comment="Session End")
+    if profit_target_long
+        strategy.close("Long", comment="Take Profit")
+    if stop_loss_long
+        strategy.close("Long", comment="Stop Loss")
+    if reversal_long
+        strategy.close("Long", comment="Reversal")
+
+// Short Entry
+if short_condition and strategy.position_size == 0
+    strategy.entry("Short", strategy.short, qty=position_size)
+    
+// Short Exit
+if strategy.position_size < 0
+    if exit_session
+        strategy.close("Short", comment="Session End")
+    if profit_target_short
+        strategy.close("Short", comment="Take Profit")
+    if stop_loss_short
+        strategy.close("Short", comment="Stop Loss")
+    if reversal_short
+        strategy.close("Short", comment="Reversal")
+
+// ==================== VISUALIZATION ====================
+
+// Plot EMAs
+plot(ema_fast, "EMA Fast", color=color.blue, linewidth=1)
+plot(ema_slow, "EMA Slow", color=color.red, linewidth=1)
+plot(sma_baseline, "SMA Baseline", color=color.gray, linewidth=2)
+
+// Plot Bollinger Bands
+plot(bollinger_upper, "BB Upper", color=color.green, linewidth=1)
+plot(bollinger_lower, "BB Lower", color=color.red, linewidth=1)
+plot(bollinger_basis, "BB Basis", color=color.orange, linewidth=1, style=plot.style_circles)
+
+// Session Background
+bgcolor(is_session ? color.new(color.blue, 95) : na, title="Session Active")
+
+// Entry Signals
+plotshape(long_condition, "Long Signal", shape.triangleup, location.belowbar, color.green, size=size.small)
+plotshape(short_condition, "Short Signal", shape.triangledown, location.abovebar, color.red, size=size.small)
+
+// Position Info
+plotchar(strategy.position_size > 0, "Long Position", "L", location.top, color.green, size=size.tiny)
+plotchar(strategy.position_size < 0, "Short Position", "S", location.top, color.red, size=size.tiny)
+
+// ==================== ALERTS ====================
+
+alertcondition(long_condition, "Long Entry", "DAX Long Signal")
+alertcondition(short_condition, "Short Entry", "DAX Short Signal")
+alertcondition(exit_session, "Session End", "DAX Session Ending - Close All Positions")
+
+// ==================== PERFORMANCE METRICS ====================
+
+// Track daily P&L
+var float daily_start_equity = strategy.initial_capital
+var float daily_pnl = 0.0
+
+if is_new_session
+    daily_start_equity := strategy.equity
+    daily_pnl := 0.0
+else
+    daily_pnl := (strategy.equity - daily_start_equity) / daily_start_equity * 100
+
+// Display metrics
+var table metrics_table = table.new(position.top_right, 2, 6, bgcolor=color.new(color.black, 80))
+
+if barstate.islast
+    table.cell(metrics_table, 0, 0, "Metric", text_color=color.white, bgcolor=color.new(color.blue, 70))
+    table.cell(metrics_table, 1, 0, "Value", text_color=color.white, bgcolor=color.new(color.blue, 70))
+    
+    table.cell(metrics_table, 0, 1, "Total Trades", text_color=color.white)
+    table.cell(metrics_table, 1, 1, str.tostring(strategy.closedtrades), text_color=color.white)
+    
+    table.cell(metrics_table, 0, 2, "Win Rate", text_color=color.white)
+    table.cell(metrics_table, 1, 2, str.tostring(strategy.wintrades / strategy.closedtrades * 100, "#.##") + "%", text_color=color.white)
+    
+    table.cell(metrics_table, 0, 3, "Profit Factor", text_color=color.white)
+    table.cell(metrics_table, 1, 3, str.tostring(strategy.grossprofit / strategy.grossloss, "#.##"), text_color=color.white)
+    
+    table.cell(metrics_table, 0, 4, "Daily P&L", text_color=color.white)
+    table.cell(metrics_table, 1, 4, str.tostring(daily_pnl, "#.##") + "%", 
+         text_color=daily_pnl > 0 ? color.green : color.red)
+    
+    table.cell(metrics_table, 0, 5, "VIX Mult", text_color=color.white)
+    table.cell(metrics_table, 1, 5, str.tostring(vix_multiplier, "#.##") + "x", text_color=color.yellow)
+
+// ============================================================================
+// Strategy Notes:
+// - Designed for European trading hours (DAX session)
+// - Combines momentum and mean reversion approaches
+// - VIX-adaptive position sizing reduces risk in volatile markets
+// - Automatic session exit prevents overnight exposure
+// - Multiple exit conditions: profit target, stop loss, reversal, session end
+// ============================================================================
