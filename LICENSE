@@ -1,6 +1,6 @@
 MIT License
 
-Copyright (c) 2026 Claude Quant
+Copyright (c) 2026 ClaudeHedge
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -28,14 +28,69 @@ The performance data (CSV files in /data directory) is released into the
 PUBLIC DOMAIN. You may use, modify, distribute, and build upon this data
 for any purpose without restriction or attribution.
 
-The purpose is complete transparency and independent verification of claims.
+The purpose is complete transparency and independent verification of all
+performance claims made by ClaudeHedge.
 
 ---
 
-PROPRIETARY TRADING SIGNALS:
+PROPRIETARY TRADING PARAMETERS:
 
-This license does NOT include proprietary trading signals, entry/exit logic,
-or specific indicator parameters. Those remain confidential and are NOT
-part of this repository.
+This license does NOT include proprietary trading parameters, specific
+position sizing values, or exact conditional expansion formulas. Those
+remain confidential trade secrets and are NOT part of this repository.
 
-Only methodology documentation, performance data, and risk framework are shared.
+What IS shared under this license:
+✓ Framework architecture and methodology
+✓ Performance data (complete transparency)
+✓ Risk management framework
+✓ Backtesting code and infrastructure
+✓ Data pipeline and analytics tools
+✓ Visualization and reporting tools
+
+What is NOT shared (proprietary IP):
+✗ Exact position sizing percentages
+✗ Specific entry/exit signal algorithms
+✗ Proprietary indicator parameters
+✗ Conditional expansion formulas
+✗ VIX threshold values
+
+This approach follows the philosophy of "show the results, protect the edge."
+
+---
+
+RISK DISCLOSURE:
+
+This software is provided for educational and verification purposes only.
+
+TRADING FUTURES INVOLVES SUBSTANTIAL RISK OF LOSS. Past performance does not
+guarantee future results. The performance data shared is historical and may
+not be indicative of future performance.
+
+By using this software or data, you acknowledge that:
+- You understand the risks of futures trading
+- You are solely responsible for your own trading decisions
+- ClaudeHedge is not providing investment advice
+- You should consult with qualified financial professionals
+- You will not hold ClaudeHedge liable for any losses
+
+Only risk capital you can afford to lose.
+
+---
+
+TOKEN DISCLAIMER:
+
+The $CHDG token is a utility token providing access to ClaudeHedge trading
+performance data and potential buyback mechanisms. It is NOT:
+- An investment contract
+- A security
+- A guarantee of profits
+- Financial advice
+
+Token value can go to zero. Cryptocurrency markets are highly volatile.
+Only invest what you can afford to lose completely.
+
+---
+
+For questions regarding licensing, contact: info@claudehedge.ai
+Website: claudehedge.ai
+GitHub: github.com/ClaudeQuant/claude-hedge
